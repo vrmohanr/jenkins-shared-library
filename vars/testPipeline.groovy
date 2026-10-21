@@ -12,6 +12,7 @@ def call (Map configMap){
                         sh """
                             echo 'Building..'
                             echo "project: ${project}, Component: ${project}"
+                            printenv | sort
                         """
                     }
                     
