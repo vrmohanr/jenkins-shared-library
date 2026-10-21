@@ -34,7 +34,7 @@ pipeline {
                     // Extract the version property
                     appVersion = packageJson.version
                     echo "The application version is: ${appVersion}"
-                    printenv | sort
+                    sh 'printenv' 
                 }
           
             }
