@@ -9,8 +9,8 @@ pipeline {
     environment {
          def appVersion = ""
          acc_id = "942701116753"
-        project = "roboshop"
-        component = "catalogue"
+        project = configMap.get("project")
+        component = configMap.get("component")
     }
     options {
         disableConcurrentBuilds()
