@@ -123,44 +123,54 @@ pipeline {
                 }
             }
         }
-        stage('Docker Build') {
-            steps {
-                script {
-                    // in this block we get aws authentication
-                    withAWS(credentials: 'aws-creds', region: 'us-east-1') {
-                        sh """
-                            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${acc_id}.dkr.ecr.us-east-1.amazonaws.com
-                            docker build -t ${acc_id}.dkr.ecr.us-east-1.amazonaws.com/${project}/${component}:${appVersion} .
-                            docker push ${acc_id}.dkr.ecr.us-east-1.amazonaws.com/${project}/${component}:${appVersion}
-                        """
+            stage('build-image') {
+                steps {
+                    script {
+                        // in this block we get aws authentication
+                        try {
+                            withAWS(credentials: 'aws-creds', region: 'us-east-1') {
+                                sh """
+                                    aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${acc_id}.dkr.ecr.us-east-1.amazonaws.com
+                                    docker build -t ${acc_id}.dkr.ecr.us-east-1.amazonaws.com/${project}/${component}:${appVersion} .
+                                """
+                            }
+                            utils.updateCommitStatus('success', 'Docker image build', 'build-image')
+                        }
+                        catch (Exception e) {
+                            utils.updateCommitStatus('failure', 'Docker image faied', 'build-image')
+                            throw e
+                        }
+                        
                     }
                 }
             }
-        }
 
-        stage('Trivy Scan') {
-            steps {
-                script {
-                    def dockerfileScan = sh(
-                        script: """
-                            trivy config --exit-code 1 --severity HIGH,CRITICAL --format table ./Dockerfile
-                        """,
-                        returnStatus: true
-                    )
+            stage('trivy-scan') {
+                steps {
+                    script {
+                        def osScan = sh(script: """
+                            trivy image --scanners vuln --pkg-types os \
+                            --severity HIGH,CRITICAL --exit-code 1 \
+                            --format table --output trivy-os-report.txt \
+                            160885265516.dkr.ecr.us-east-1.amazonaws.com/${project}/${component}:${appVersion}
+                        """, returnStatus: true)
 
-                    def imageScan = sh(
-                        script: """
-                            trivy image --scanners vuln --pkg-types os --exit-code 1 --severity HIGH,CRITICAL --format table ${acc_id}.dkr.ecr.us-east-1.amazonaws.com/${project}/${component}:${appVersion}
-                        """,
-                        returnStatus: true
-                    )
+                        def dockerfileScan = sh(script: """
+                            trivy config --severity HIGH,CRITICAL --exit-code 1 \
+                            --format table --output trivy-dockerfile-report.txt \
+                            Dockerfile
+                        """, returnStatus: true)
 
-                    if (dockerfileScan != 0 || imageScan != 0) {
-                        error "Trivy found HIGH/CRITICAL issues in Dockerfile and/or OS packages. Failing pipeline."
+                        archiveArtifacts artifacts: 'trivy-*.txt', allowEmptyArchive: true
+
+                        if (osScan != 0 || dockerfileScan != 0) {
+                            utils.updateCommitStatus('failure', 'trivy scan failed', 'trivy-scan')
+                            error("Trivy found HIGH/CRITICAL issues — OS scan exit: ${osScan}, Dockerfile scan exit: ${dockerfileScan}")
+                        }
+                        utils.updateCommitStatus('success', 'trivy scan success', 'trivy-scan')
                     }
                 }
             }
-        }
         stage('ECR Image push') {
             steps {
                 script {
