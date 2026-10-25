@@ -11,6 +11,7 @@ pipeline {
          acc_id = "942701116753"
         project = configMap.get("project")
         component = configMap.get("component")
+        org = "vrmohanr"
     }
     options {
         disableConcurrentBuilds()
@@ -49,16 +50,22 @@ pipeline {
             }
         }
 
-                // this command gives us coverage report and test cases report, sonarqube access this to check quality gate
-        stage('Unit tests') {
-            steps {
-                script {
-                    sh """
-                        npm test
-                    """
-                } 
+            // this command gives us coverage report and test cases report, sonarqube access this to check quality gate
+            stage('unit-tests') {
+                steps {
+                    script {
+                        try {
+                            sh """
+                                npm test
+                            """
+                            utils.updateCommitStatus('SUCCESS', 'Unit tests passed', 'unit-tests')
+                        } catch (Exception e) {
+                            utils.updateCommitStatus('FAILURE', 'Unit tests failed', 'unit-tests')
+                            throw e
+                        }
+                    } 
+                }
             }
-        }
         stage('SonarQube Analysis') {
             steps {
                 // 'My SonarQube Server' must match the name configured in Jenkins System Settings
