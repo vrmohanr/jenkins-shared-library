@@ -69,12 +69,12 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 // 'My SonarQube Server' must match the name configured in Jenkins System Settings
-                // withSonarQubeEnv('sonar-server') {
-                //     sh "${tool 'sonar-8'}/bin/sonar-scanner"
-                // }
-                script {
-                    sh "echo 'sonarqube analysis is done'"
+                withSonarQubeEnv('sonar-server') {
+                    sh "${tool 'sonar-8'}/bin/sonar-scanner"
                 }
+                // script {
+                //     sh "echo 'sonarqube analysis is done'"
+                // }
             }
         }
 
@@ -82,8 +82,8 @@ pipeline {
                 steps {
                     timeout(time: 10, unit: 'MINUTES') {
                         script {
-                            //def qg = waitForQualityGate() // Pauses pipeline
-                            def qg= 'OK'
+                            def qg = waitForQualityGate() // Pauses pipeline
+                            //def qg= 'OK'
                             if (qg.status != 'OK') {
                                 utils.updateCommitStatus('FAILURE', 'Sonar Scan failed', 'sonar-scan')
                                 error "Pipeline aborted: ${qg.status}"
