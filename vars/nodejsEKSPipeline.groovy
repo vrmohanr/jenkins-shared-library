@@ -249,8 +249,9 @@ pipeline {
             }
             }
         }
+          */
     } 
-    */
+  
  //   Post build section
         post { 
         always { 
@@ -263,6 +264,7 @@ pipeline {
             echo 'I will Run when it is failed'
         }
     }
+}
 }
 
 
