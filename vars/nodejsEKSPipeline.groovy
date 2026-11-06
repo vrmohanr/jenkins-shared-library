@@ -66,6 +66,7 @@ pipeline {
                     } 
                 }
             }
+            /*
         stage('SonarQube Analysis') {
             steps {
                 // 'My SonarQube Server' must match the name configured in Jenkins System Settings
@@ -94,7 +95,7 @@ pipeline {
                         }
                     }
                 }
-            } 
+            } */
             stage('library-scan') {
                 steps {
                     script {
@@ -184,24 +185,54 @@ pipeline {
                     }
                 }
             }
-        stage('ECR Image push') {
-            steps {
-                script {
-                    // in this block we get aws authentication
-                    withAWS(credentials: 'aws-creds', region: 'us-east-1') {
-                        sh """
-                            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${acc_id}.dkr.ecr.us-east-1.amazonaws.com
-                            docker push ${acc_id}.dkr.ecr.us-east-1.amazonaws.com/${project}/${component}:${appVersion}
-                        """
+    stage('push-image-to-ecr'){
+        steps{
+            script{
+                        try {
+                            withAWS(credentials: 'aws-creds', region: 'us-east-1') {
+                                sh """
+                                docker push ${acc_id}.dkr.ecr.us-east-1.amazonaws.com/${project}/${component}:${appVersion}
+                                """
+                            }
+                            utils.updateCommitStatus('success', 'push image to ECR', 'push-image')
+                        }
+                        catch(Exception e){
+                            utils.updateCommitStatus('failure', 'push image to ECR', 'push-image')
+                            throw e
+                        }
                     }
                 }
             }
-        }
         stage('Deploy') {
-             when {
-                // Evaluates the boolean parameter directly
-                expression { "${params.DEPLOY}" == "true" }
+                steps {
+                    script {
+                        try {
+                            withAWS(credentials: 'aws-creds', region: 'us-east-1') {
+                                sh """
+                                    aws eks update-kubeconfig --name roboshop --region us-east-1
+
+                                    helm upgrade --install ${component} ./helm \
+                                        -f ./helm/values-dev.yaml \
+                                        --namespace roboshop-dev \
+                                        --create-namespace \
+                                        --set deployment.imageVersion=${appVersion} \
+                                        --wait --timeout 5m
+
+                                    kubectl rollout status deployment/${component} -n roboshop-dev --timeout=120s
+                                """
+                            }
+                            utils.updateCommitStatus('success', 'Deployed to roboshop-dev', 'dev-deploy')
+                        }
+                        catch (Exception e) {
+                            utils.updateCommitStatus('failure', 'Deploy to roboshop-dev failed', 'dev-deploy')
+                            throw e
+                        }
+                    }
+                }
             }
+
+
+
 /*          input {
                 message "Should we continue?"
                 ok "Yes, we should."
