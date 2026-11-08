@@ -258,11 +258,23 @@ pipeline {
         always { 
             echo 'I will always say Hello again!'
         }
-        success { 
-            echo 'I will run when success'
-        }
+            success {
+                slackSend(
+                    channel: '#jenkins-alert-ram',
+                    color: 'good',
+                    tokenCredentialId: 'slack-token',
+                    message: "✅ *${component}* pipeline succeeded — build #${env.BUILD_NUMBER} (<${env.BUILD_URL}console|console>)"
+                )
+                echo "success"
+            }
         failure { 
-            echo 'I will Run when it is failed'
+                    slackSend(
+                    channel: '#test-cii',
+                    color: 'danger',
+                    tokenCredentialId: 'slack-token',
+                    message: "❌ *${component}* pipeline failed — build #${env.BUILD_NUMBER} (<${env.BUILD_URL}console|console>)"
+                ) 
+                echo "failed"
         }
     }
 }
