@@ -88,7 +88,7 @@ pipeline {
 
             stage('promote-image') {
                 when {
-                    expression { env_ENVIRONMENT == 'dev' }
+                    expression { env.ENVIRONMENT == 'dev' }
                 }
                 steps {
                     script {
