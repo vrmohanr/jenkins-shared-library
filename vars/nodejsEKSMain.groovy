@@ -12,6 +12,7 @@ pipeline {
         project = configMap.get("project")
         component = configMap.get("component")
         org = "vrmohanr"
+        ENVIRONMENT = "dev"
     }
     options {
         disableConcurrentBuilds()
@@ -85,7 +86,7 @@ pipeline {
                 }
             }
 
-                        stage('promote-image') {
+            stage('promote-image') {
                 when {
                     expression { env_ENVIRONMENT == 'dev' }
                 }
