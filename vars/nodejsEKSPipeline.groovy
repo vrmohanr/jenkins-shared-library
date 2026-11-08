@@ -286,7 +286,7 @@ pipeline {
             }
         failure { 
                     slackSend(
-                    channel: '#test-cii',
+                    channel: '#jenkins-alert-ram',
                     color: 'danger',
                     tokenCredentialId: 'slack-token',
                     message: "❌ *${component}* pipeline failed — build #${env.BUILD_NUMBER} (<${env.BUILD_URL}console|console>)"
