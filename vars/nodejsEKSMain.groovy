@@ -33,7 +33,7 @@ def call (Map configMap){
             acc_id = "942701116753"
             project = configMap.get("project")
             component = configMap.get("component")
-            org = "90s-org"
+            org = "vrmohanr"
             JIRA_SITE = "roboshop-jira"
             jiraProjectKey = "DAWS90S"
         }
@@ -46,7 +46,7 @@ def call (Map configMap){
            can't be set via the UI at all. Declaring the trigger here instead means it's
            regenerated from code on every scan — Jira Automation calls this webhook
            directly. The 'jira-secret' credential is a Secret text credential; its
-           value is whatever gets passed as ?token=... in the webhook URL. */
+           value is whatever gets passed as ?token=... in the webhook URL. *
         triggers {
             GenericTrigger(
                 genericVariables: [
@@ -64,6 +64,7 @@ def call (Map configMap){
                 printPostContent: true
             )
         }
+        */
         stages {
             /* Runs first, always. Resolves the real inputs for this build once, so
                every later stage can just read these instead of choosing between
@@ -107,7 +108,7 @@ def call (Map configMap){
                         try {
                             withAWS(credentials: 'aws-creds', region: 'us-east-1') {
                                 sh """
-                                    aws eks update-kubeconfig --name roboshop --region us-east-1
+                                    aws eks update-kubeconfig --name roboshop-dev --region us-east-1
 
                                     helm upgrade --install ${component} ./helm \
                                         -f ./helm/values-dev.yaml \
@@ -155,7 +156,7 @@ def call (Map configMap){
                that tracks it through SIT/UAT/PROD, carrying the commit and version so
                nobody has to type them in by hand later. Jenkins does not trigger SIT
                itself — the ticket sits at Trigger SIT until Jira's Automation rule
-               fires the webhook above. */
+               fires the webhook above. 
             stage('create-jira-ticket') {
                 when {
                     expression { env_ENVIRONMENT == 'dev' }
@@ -167,6 +168,7 @@ def call (Map configMap){
                     }
                 }
             }
+            */
             /* Promote the same image that just passed dev/api-tests by retagging it
                with the short commit SHA in ECR. */
             stage('promote-image') {
@@ -229,7 +231,7 @@ def call (Map configMap){
                         try {
                             withAWS(credentials: 'aws-creds', region: 'us-east-1') {
                                 sh """
-                                    aws eks update-kubeconfig --name roboshop --region us-east-1
+                                    aws eks update-kubeconfig --name roboshop-dev --region us-east-1
 
                                     helm upgrade --install ${env_COMPONENT} ./helm \
                                         -f ./helm/values-sit.yaml \
@@ -264,7 +266,7 @@ def call (Map configMap){
                     script {
                         try {
                             withAWS(credentials: 'aws-creds', region: 'us-east-1') {
-                                sh "aws eks update-kubeconfig --name roboshop --region us-east-1"
+                                sh "aws eks update-kubeconfig --name roboshop-dev --region us-east-1"
 
                                 /* The Jenkins agent can't resolve *.svc.cluster.local from
                                    roboshop-sit, but it's in the same VPC as the EKS pods —
@@ -308,7 +310,7 @@ def call (Map configMap){
                         try {
                             withAWS(credentials: 'aws-creds', region: 'us-east-1') {
                                 sh """
-                                    aws eks update-kubeconfig --name roboshop --region us-east-1
+                                    aws eks update-kubeconfig --name roboshop-dev --region us-east-1
 
                                     helm upgrade --install ${env_COMPONENT} ./helm \
                                         -f ./helm/values-uat.yaml \
@@ -343,7 +345,7 @@ def call (Map configMap){
                     script {
                         try {
                             withAWS(credentials: 'aws-creds', region: 'us-east-1') {
-                                sh "aws eks update-kubeconfig --name roboshop --region us-east-1"
+                                sh "aws eks update-kubeconfig --name roboshop-dev --region us-east-1"
 
                                 /* The Jenkins agent can't resolve *.svc.cluster.local from
                                    roboshop-uat, but it's in the same VPC as the EKS pods —
@@ -417,7 +419,7 @@ def call (Map configMap){
                 steps {
                     script {
                         withAWS(credentials: 'aws-creds', region: 'us-east-1') {
-                            sh "aws eks update-kubeconfig --name roboshop --region us-east-1"
+                            sh "aws eks update-kubeconfig --name roboshop-dev --region us-east-1"
 
                             /* Only attempt a rollback if there's a prior successful release
                                to roll back to — a failed first-ever deploy has nothing behind it. */
